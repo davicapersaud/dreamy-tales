@@ -1,0 +1,17 @@
+{
+  "name": "dreamy-tales",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/api",
+    "packages/web"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=packages/api\" \"npm run dev --workspace=packages/web\" --names \"api,web\" --prefix-colors \"cyan,magenta\"",
+    "build": "npm run build --workspace=packages/api && npm run build --workspace=packages/web",
+    "install:all": "npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+data/dreamy-tales.db
+data/dreamy-tales.db-shm
+data/dreamy-tales.db-wal
+data/illustrations/
+*.log
+.DS_Store
