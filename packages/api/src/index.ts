@@ -27,11 +27,20 @@ const PORT = parseInt(process.env.PORT || '3001');
 // Middleware
 const allowedOrigins = [
   'http://localhost:5173',
-  process.env.FRONTEND_URL,
+  process.env.FRONTEND_URL?.trim(),
 ].filter(Boolean) as string[];
 
+console.log('[cors] Allowed origins:', JSON.stringify(allowedOrigins));
+
 app.use(cors({
-  origin: allowedOrigins,
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn('[cors] Blocked origin:', origin);
+      callback(null, false);
+    }
+  },
   credentials: true,
 }));
 app.use(express.json());
