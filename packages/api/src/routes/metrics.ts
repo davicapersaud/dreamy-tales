@@ -1,49 +1,61 @@
 import { Router, Response } from 'express';
-import { db } from '../db/client.js';
+import { query, queryOne } from '../db/client.js';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
 router.use(requireAuth);
 
-router.get('/', (_req: AuthRequest, res: Response): void => {
+router.get('/', async (_req: AuthRequest, res: Response): Promise<void> => {
   const now = Date.now();
   const day7ago = now - 7 * 24 * 60 * 60 * 1000;
   const day30ago = now - 30 * 24 * 60 * 60 * 1000;
 
   // D7 retention: % of users registered 7-14 days ago who were active in last 7 days
-  const registered7to14 = (db.prepare(
-    'SELECT COUNT(*) as c FROM parents WHERE created_at BETWEEN ? AND ?'
-  ).get(now - 14 * 24 * 60 * 60 * 1000, day7ago) as { c: number }).c;
+  const reg7to14Row = await queryOne<{ c: string }>(
+    'SELECT COUNT(*) as c FROM parents WHERE created_at BETWEEN $1 AND $2',
+    [now - 14 * 24 * 60 * 60 * 1000, day7ago]
+  );
+  const registered7to14 = Number(reg7to14Row?.c ?? 0);
 
-  const active7days = (db.prepare(
-    'SELECT COUNT(DISTINCT parent_id) as c FROM app_sessions WHERE started_at > ?'
-  ).get(day7ago) as { c: number }).c;
+  const active7Row = await queryOne<{ c: string }>(
+    'SELECT COUNT(DISTINCT parent_id) as c FROM app_sessions WHERE started_at > $1',
+    [day7ago]
+  );
+  const active7days = Number(active7Row?.c ?? 0);
 
   const d7Retention = registered7to14 > 0
     ? Math.round((active7days / registered7to14) * 100)
     : null;
 
   // Stories generated per user per week (last 30 days)
-  const storiesLast30 = (db.prepare(
-    'SELECT COUNT(*) as c FROM stories WHERE created_at > ? AND status = "ready"'
-  ).get(day30ago) as { c: number }).c;
-  const activeUsersLast30 = (db.prepare(
-    'SELECT COUNT(DISTINCT parent_id) as c FROM app_sessions WHERE started_at > ?'
-  ).get(day30ago) as { c: number }).c;
+  const stories30Row = await queryOne<{ c: string }>(
+    "SELECT COUNT(*) as c FROM stories WHERE created_at > $1 AND status = 'ready'",
+    [day30ago]
+  );
+  const storiesLast30 = Number(stories30Row?.c ?? 0);
+
+  const activeUsers30Row = await queryOne<{ c: string }>(
+    'SELECT COUNT(DISTINCT parent_id) as c FROM app_sessions WHERE started_at > $1',
+    [day30ago]
+  );
+  const activeUsersLast30 = Number(activeUsers30Row?.c ?? 0);
+
   const weeksIn30 = 30 / 7;
   const storiesPerUserPerWeek = activeUsersLast30 > 0
     ? Math.round((storiesLast30 / activeUsersLast30 / weeksIn30) * 10) / 10
     : 0;
 
   // Average session length (last 30 days, completed sessions only)
-  const avgSessionMs = (db.prepare(
-    'SELECT AVG(duration_ms) as avg FROM app_sessions WHERE started_at > ? AND duration_ms IS NOT NULL'
-  ).get(day30ago) as { avg: number | null }).avg;
+  const avgRow = await queryOne<{ avg: string | null }>(
+    'SELECT AVG(duration_ms) as avg FROM app_sessions WHERE started_at > $1 AND duration_ms IS NOT NULL',
+    [day30ago]
+  );
+  const avgSessionMs = avgRow?.avg != null ? Number(avgRow.avg) : null;
 
   // Story generation latency percentiles
-  const latencies = db.prepare(
+  const latencies = await query<{ llm_latency_ms: number }>(
     'SELECT llm_latency_ms FROM stories WHERE llm_latency_ms IS NOT NULL ORDER BY llm_latency_ms'
-  ).all() as { llm_latency_ms: number }[];
+  );
 
   const p = (arr: number[], pct: number) => {
     if (arr.length === 0) return null;
@@ -55,38 +67,51 @@ router.get('/', (_req: AuthRequest, res: Response): void => {
   const latencyP95 = p(latencyValues, 95);
 
   // Content safety pass rate
-  const totalModerations = (db.prepare(
+  const totalModRow = await queryOne<{ c: string }>(
     'SELECT COUNT(*) as c FROM stories WHERE prompt_moderation_passed IS NOT NULL'
-  ).get() as { c: number }).c;
-  const blocked = (db.prepare(
-    'SELECT COUNT(*) as c FROM events WHERE name = "content_moderation_blocked"'
-  ).get() as { c: number }).c;
+  );
+  const totalModerations = Number(totalModRow?.c ?? 0);
+
+  const blockedRow = await queryOne<{ c: string }>(
+    "SELECT COUNT(*) as c FROM events WHERE name = 'content_moderation_blocked'"
+  );
+  const blocked = Number(blockedRow?.c ?? 0);
+
   const safetyPassRate = totalModerations > 0
     ? Math.round(((totalModerations - blocked) / totalModerations) * 10000) / 100
     : null;
 
   // Total cost tracking
-  const costRow = db.prepare(
+  const costRow = await queryOne<{ total: string | null }>(
     'SELECT SUM(estimated_cost_usd) as total FROM stories WHERE estimated_cost_usd IS NOT NULL'
-  ).get() as { total: number | null };
-  const totalCostUsd = costRow.total ?? 0;
+  );
+  const totalCostUsd = costRow?.total != null ? Number(costRow.total) : 0;
 
-  const cost7dRow = db.prepare(
-    'SELECT SUM(estimated_cost_usd) as total FROM stories WHERE estimated_cost_usd IS NOT NULL AND created_at > ?'
-  ).get(day7ago) as { total: number | null };
-  const cost7dUsd = cost7dRow.total ?? 0;
+  const cost7dRow = await queryOne<{ total: string | null }>(
+    'SELECT SUM(estimated_cost_usd) as total FROM stories WHERE estimated_cost_usd IS NOT NULL AND created_at > $1',
+    [day7ago]
+  );
+  const cost7dUsd = cost7dRow?.total != null ? Number(cost7dRow.total) : 0;
 
-  const totalStories = (db.prepare('SELECT COUNT(*) as c FROM stories WHERE status = "ready"').get() as { c: number }).c;
+  const totalStoriesRow = await queryOne<{ c: string }>(
+    "SELECT COUNT(*) as c FROM stories WHERE status = 'ready'"
+  );
+  const totalStories = Number(totalStoriesRow?.c ?? 0);
   const avgCostPerStory = totalStories > 0 ? totalCostUsd / totalStories : 0;
 
   // Total users and stories
-  const totalUsers = (db.prepare('SELECT COUNT(*) as c FROM parents').get() as { c: number }).c;
-  const totalChildren = (db.prepare('SELECT COUNT(*) as c FROM children').get() as { c: number }).c;
+  const usersRow = await queryOne<{ c: string }>('SELECT COUNT(*) as c FROM parents');
+  const totalUsers = Number(usersRow?.c ?? 0);
+
+  const childrenRow = await queryOne<{ c: string }>('SELECT COUNT(*) as c FROM children');
+  const totalChildren = Number(childrenRow?.c ?? 0);
 
   // Stories generated last 7 days
-  const storiesLast7 = (db.prepare(
-    'SELECT COUNT(*) as c FROM stories WHERE created_at > ? AND status = "ready"'
-  ).get(day7ago) as { c: number }).c;
+  const stories7Row = await queryOne<{ c: string }>(
+    "SELECT COUNT(*) as c FROM stories WHERE created_at > $1 AND status = 'ready'",
+    [day7ago]
+  );
+  const storiesLast7 = Number(stories7Row?.c ?? 0);
 
   res.json({
     retention: { d7: d7Retention },

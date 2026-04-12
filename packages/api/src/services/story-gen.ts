@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { db } from '../db/client.js';
+import { query } from '../db/client.js';
 import { moderateText, getFallbackStory, GeneratedStory } from './moderation.js';
 import { trackEvent } from './telemetry.js';
 
@@ -14,10 +14,11 @@ interface Child {
   name_pronunciation: string | null;
 }
 
-function getRecentThemes(childId: string): string {
-  const rows = db.prepare(
-    'SELECT title, theme_summary FROM story_themes WHERE child_id = ? ORDER BY created_at DESC LIMIT 5'
-  ).all(childId) as { title: string; theme_summary: string }[];
+async function getRecentThemes(childId: string): Promise<string> {
+  const rows = await query<{ title: string; theme_summary: string }>(
+    'SELECT title, theme_summary FROM story_themes WHERE child_id = $1 ORDER BY created_at DESC LIMIT 5',
+    [childId]
+  );
 
   if (rows.length === 0) return 'None yet — this is their first story!';
   return rows.map((r) => `• "${r.title}": ${r.theme_summary}`).join('\n');
@@ -30,8 +31,8 @@ function getStoryLength(age: number): { pages: number; wordsMin: number; wordsMa
   return { pages: 5, wordsMin: 120, wordsMax: 150 };
 }
 
-function buildSystemPrompt(child: Child, interests: string[]): string {
-  const recentThemes = getRecentThemes(child.id);
+async function buildSystemPrompt(child: Child, interests: string[]): Promise<string> {
+  const recentThemes = await getRecentThemes(child.id);
   const interestList = interests.join(', ');
   const nameNote = child.name_pronunciation
     ? ` (pronounced: ${child.name_pronunciation})`
@@ -140,7 +141,7 @@ export async function generateStory(
   }
 
   // Build prompts
-  const systemPrompt = buildSystemPrompt(child, interests);
+  const systemPrompt = await buildSystemPrompt(child, interests);
   const userPrompt = buildUserPrompt(child, interests, themePrompt);
 
   // Call Gemini

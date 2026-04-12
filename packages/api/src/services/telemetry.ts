@@ -1,4 +1,4 @@
-import { db } from '../db/client.js';
+import { execute, queryOne } from '../db/client.js';
 
 interface EventPayload {
   name: string;
@@ -10,48 +10,52 @@ interface EventPayload {
 }
 
 export function trackEvent(payload: EventPayload): void {
-  try {
-    db.prepare(`
-      INSERT INTO events (name, parent_id, child_id, story_id, app_session_id, properties, ts)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      payload.name,
-      payload.parentId ?? null,
-      payload.childId ?? null,
-      payload.storyId ?? null,
-      payload.appSessionId ?? null,
-      JSON.stringify(payload.properties ?? {}),
-      Date.now()
-    );
-  } catch (err) {
-    // Telemetry failures must never crash the app
-    console.error('[telemetry] Failed to track event:', err);
-  }
+  execute(`
+    INSERT INTO events (name, parent_id, child_id, story_id, app_session_id, properties, ts)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+  `, [
+    payload.name,
+    payload.parentId ?? null,
+    payload.childId ?? null,
+    payload.storyId ?? null,
+    payload.appSessionId ?? null,
+    JSON.stringify(payload.properties ?? {}),
+    Date.now(),
+  ]).catch((err) => console.error('[telemetry] Failed to track event:', err));
 }
 
 export function startAppSession(parentId: string, sessionId: string): void {
-  db.prepare(
-    'INSERT OR IGNORE INTO app_sessions (id, parent_id, started_at) VALUES (?, ?, ?)'
-  ).run(sessionId, parentId, Date.now());
+  execute(
+    'INSERT INTO app_sessions (id, parent_id, started_at) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+    [sessionId, parentId, Date.now()]
+  ).catch((err) => console.error('[telemetry] startAppSession failed:', err));
 }
 
 export function endAppSession(sessionId: string): void {
-  const session = db.prepare('SELECT started_at FROM app_sessions WHERE id = ?').get(sessionId) as
-    | { started_at: number }
-    | undefined;
-  if (!session) return;
-  const duration = Date.now() - session.started_at;
-  db.prepare('UPDATE app_sessions SET ended_at = ?, duration_ms = ? WHERE id = ?').run(
-    Date.now(), duration, sessionId
-  );
+  (async () => {
+    const session = await queryOne<{ started_at: number }>(
+      'SELECT started_at FROM app_sessions WHERE id = $1',
+      [sessionId]
+    );
+    if (!session) return;
+    const duration = Date.now() - Number(session.started_at);
+    await execute(
+      'UPDATE app_sessions SET ended_at = $1, duration_ms = $2 WHERE id = $3',
+      [Date.now(), duration, sessionId]
+    );
+  })().catch((err) => console.error('[telemetry] endAppSession failed:', err));
 }
 
 export function incrementSessionPages(sessionId: string): void {
-  db.prepare('UPDATE app_sessions SET pages_read = pages_read + 1 WHERE id = ?').run(sessionId);
+  execute(
+    'UPDATE app_sessions SET pages_read = pages_read + 1 WHERE id = $1',
+    [sessionId]
+  ).catch((err) => console.error('[telemetry] incrementSessionPages failed:', err));
 }
 
 export function incrementSessionStories(sessionId: string): void {
-  db.prepare(
-    'UPDATE app_sessions SET stories_generated = stories_generated + 1 WHERE id = ?'
-  ).run(sessionId);
+  execute(
+    'UPDATE app_sessions SET stories_generated = stories_generated + 1 WHERE id = $1',
+    [sessionId]
+  ).catch((err) => console.error('[telemetry] incrementSessionStories failed:', err));
 }

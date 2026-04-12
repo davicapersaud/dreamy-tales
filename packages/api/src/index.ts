@@ -6,7 +6,7 @@ import rateLimit from 'express-rate-limit';
 import { requireAuth } from './middleware/auth.js';
 
 // Startup validation
-const required = ['GEMINI_API_KEY', 'SESSION_SECRET'];
+const required = ['GEMINI_API_KEY', 'SESSION_SECRET', 'DATABASE_URL'];
 const missing = required.filter((k) => !process.env[k]);
 if (missing.length > 0) {
   console.error(`[startup] Missing required env vars: ${missing.join(', ')}`);
@@ -14,8 +14,7 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
-// Import DB to initialise schema on startup
-import './db/client.js';
+import { initDb } from './db/client.js';
 
 import authRouter from './routes/auth.js';
 import childrenRouter from './routes/children.js';
@@ -149,9 +148,17 @@ function getDashboardHtml(): string {
 </html>`;
 }
 
-app.listen(PORT, () => {
-  console.log(`[api] Dreamy Tales API  →  http://localhost:${PORT}`);
-  console.log(`[api] Metrics dashboard →  http://localhost:${PORT}/dashboard`);
+async function start(): Promise<void> {
+  await initDb();
+  app.listen(PORT, () => {
+    console.log(`[api] Dreamy Tales API  →  http://localhost:${PORT}`);
+    console.log(`[api] Metrics dashboard →  http://localhost:${PORT}/dashboard`);
+  });
+}
+
+start().catch((err) => {
+  console.error('[startup] Failed to start:', err);
+  process.exit(1);
 });
 
 export default app;

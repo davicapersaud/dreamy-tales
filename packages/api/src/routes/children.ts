@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
 import { ulid } from 'ulid';
-import { db } from '../db/client.js';
+import { query, queryOne, execute } from '../db/client.js';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
@@ -23,13 +23,14 @@ const ChildSchema = z.object({
   namePronunciation: z.string().max(100).optional(),
 });
 
-router.get('/', (req: AuthRequest, res: Response): void => {
-  const children = db.prepare(
-    'SELECT id, name, age, avatar, interests, name_pronunciation, created_at FROM children WHERE parent_id = ? ORDER BY created_at ASC'
-  ).all(req.parentId) as Array<{
+router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
+  const children = await query<{
     id: string; name: string; age: number; avatar: string;
     interests: string; name_pronunciation: string | null; created_at: number;
-  }>;
+  }>(
+    'SELECT id, name, age, avatar, interests, name_pronunciation, created_at FROM children WHERE parent_id = $1 ORDER BY created_at ASC',
+    [req.parentId]
+  );
 
   res.json(children.map((c) => ({
     id: c.id,
@@ -42,7 +43,7 @@ router.get('/', (req: AuthRequest, res: Response): void => {
   })));
 });
 
-router.post('/', (req: AuthRequest, res: Response): void => {
+router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
   const parsed = ChildSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: 'Validation failed', details: parsed.error.flatten() });
@@ -50,9 +51,15 @@ router.post('/', (req: AuthRequest, res: Response): void => {
   }
 
   // Free tier: max 2 children
-  const parent = db.prepare('SELECT tier FROM parents WHERE id = ?').get(req.parentId) as
-    | { tier: string } | undefined;
-  const count = (db.prepare('SELECT COUNT(*) as c FROM children WHERE parent_id = ?').get(req.parentId) as { c: number }).c;
+  const parent = await queryOne<{ tier: string }>(
+    'SELECT tier FROM parents WHERE id = $1',
+    [req.parentId]
+  );
+  const countRow = await queryOne<{ c: string }>(
+    'SELECT COUNT(*) as c FROM children WHERE parent_id = $1',
+    [req.parentId]
+  );
+  const count = Number(countRow?.c ?? 0);
   const maxChildren = parent?.tier === 'premium' ? 999 : MAX_FREE_CHILDREN;
   if (count >= maxChildren) {
     res.status(403).json({ error: 'Profile limit reached', maxChildren });
@@ -63,18 +70,20 @@ router.post('/', (req: AuthRequest, res: Response): void => {
   const id = ulid();
   const now = Date.now();
 
-  db.prepare(`
-    INSERT INTO children (id, parent_id, name, age, avatar, interests, name_pronunciation, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, req.parentId, name, age, avatar, JSON.stringify(interests), namePronunciation ?? null, now, now);
+  await execute(
+    `INSERT INTO children (id, parent_id, name, age, avatar, interests, name_pronunciation, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [id, req.parentId, name, age, avatar, JSON.stringify(interests), namePronunciation ?? null, now, now]
+  );
 
   res.status(201).json({ id, name, age, avatar, interests, namePronunciation: namePronunciation ?? null, createdAt: now });
 });
 
-router.put('/:id', (req: AuthRequest, res: Response): void => {
-  const child = db.prepare('SELECT id FROM children WHERE id = ? AND parent_id = ?').get(
-    req.params.id, req.parentId
-  ) as { id: string } | undefined;
+router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
+  const child = await queryOne<{ id: string }>(
+    'SELECT id FROM children WHERE id = $1 AND parent_id = $2',
+    [req.params.id, req.parentId]
+  );
   if (!child) {
     res.status(404).json({ error: 'Child not found' });
     return;
@@ -89,32 +98,33 @@ router.put('/:id', (req: AuthRequest, res: Response): void => {
   const { name, age, avatar, interests, namePronunciation } = parsed.data;
   const now = Date.now();
 
-  if (name !== undefined) db.prepare('UPDATE children SET name = ?, updated_at = ? WHERE id = ?').run(name, now, req.params.id);
-  if (age !== undefined) db.prepare('UPDATE children SET age = ?, updated_at = ? WHERE id = ?').run(age, now, req.params.id);
-  if (avatar !== undefined) db.prepare('UPDATE children SET avatar = ?, updated_at = ? WHERE id = ?').run(avatar, now, req.params.id);
-  if (interests !== undefined) db.prepare('UPDATE children SET interests = ?, updated_at = ? WHERE id = ?').run(JSON.stringify(interests), now, req.params.id);
-  if (namePronunciation !== undefined) db.prepare('UPDATE children SET name_pronunciation = ?, updated_at = ? WHERE id = ?').run(namePronunciation, now, req.params.id);
+  if (name !== undefined) await execute('UPDATE children SET name = $1, updated_at = $2 WHERE id = $3', [name, now, req.params.id]);
+  if (age !== undefined) await execute('UPDATE children SET age = $1, updated_at = $2 WHERE id = $3', [age, now, req.params.id]);
+  if (avatar !== undefined) await execute('UPDATE children SET avatar = $1, updated_at = $2 WHERE id = $3', [avatar, now, req.params.id]);
+  if (interests !== undefined) await execute('UPDATE children SET interests = $1, updated_at = $2 WHERE id = $3', [JSON.stringify(interests), now, req.params.id]);
+  if (namePronunciation !== undefined) await execute('UPDATE children SET name_pronunciation = $1, updated_at = $2 WHERE id = $3', [namePronunciation, now, req.params.id]);
 
-  const updated = db.prepare('SELECT * FROM children WHERE id = ?').get(req.params.id) as {
+  const updated = await queryOne<{
     id: string; name: string; age: number; avatar: string; interests: string;
     name_pronunciation: string | null; created_at: number;
-  };
+  }>('SELECT * FROM children WHERE id = $1', [req.params.id]);
   res.json({
-    id: updated.id, name: updated.name, age: updated.age, avatar: updated.avatar,
-    interests: JSON.parse(updated.interests), namePronunciation: updated.name_pronunciation,
-    createdAt: updated.created_at,
+    id: updated!.id, name: updated!.name, age: updated!.age, avatar: updated!.avatar,
+    interests: JSON.parse(updated!.interests), namePronunciation: updated!.name_pronunciation,
+    createdAt: updated!.created_at,
   });
 });
 
-router.delete('/:id', (req: AuthRequest, res: Response): void => {
-  const child = db.prepare('SELECT id FROM children WHERE id = ? AND parent_id = ?').get(
-    req.params.id, req.parentId
-  ) as { id: string } | undefined;
+router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
+  const child = await queryOne<{ id: string }>(
+    'SELECT id FROM children WHERE id = $1 AND parent_id = $2',
+    [req.params.id, req.parentId]
+  );
   if (!child) {
     res.status(404).json({ error: 'Child not found' });
     return;
   }
-  db.prepare('DELETE FROM children WHERE id = ?').run(req.params.id);
+  await execute('DELETE FROM children WHERE id = $1', [req.params.id]);
   res.json({ ok: true });
 });
 

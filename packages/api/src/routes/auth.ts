@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { ulid } from 'ulid';
 import { z } from 'zod';
-import { db } from '../db/client.js';
+import { queryOne, execute } from '../db/client.js';
 import { AuthRequest } from '../middleware/auth.js';
 import { trackEvent, startAppSession } from '../services/telemetry.js';
 
@@ -47,7 +47,10 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 
   const { email, password, displayName } = parsed.data;
 
-  const existing = db.prepare('SELECT id FROM parents WHERE email = ?').get(email.toLowerCase());
+  const existing = await queryOne<{ id: string }>(
+    'SELECT id FROM parents WHERE email = $1',
+    [email.toLowerCase()]
+  );
   if (existing) {
     res.status(409).json({ error: 'Email already registered' });
     return;
@@ -62,17 +65,19 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 
   const parentId = ulid();
   const now = Date.now();
-  db.prepare(`
-    INSERT INTO parents (id, email, password_hash, display_name, tier, created_at, updated_at)
-    VALUES (?, ?, ?, ?, 'free', ?, ?)
-  `).run(parentId, email.toLowerCase(), passwordHash, displayName, now, now);
+  await execute(
+    `INSERT INTO parents (id, email, password_hash, display_name, tier, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, 'free', $5, $6)`,
+    [parentId, email.toLowerCase(), passwordHash, displayName, now, now]
+  );
 
   const sessionId = ulid();
   const token = issueToken(parentId, sessionId);
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-  db.prepare(
-    'INSERT INTO sessions (id, parent_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)'
-  ).run(sessionId, parentId, tokenHash, now + 7 * 24 * 60 * 60 * 1000, now);
+  await execute(
+    'INSERT INTO sessions (id, parent_id, token_hash, expires_at, created_at) VALUES ($1, $2, $3, $4, $5)',
+    [sessionId, parentId, tokenHash, now + 7 * 24 * 60 * 60 * 1000, now]
+  );
 
   startAppSession(parentId, sessionId);
   setSessionCookie(res, token);
@@ -96,9 +101,10 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
 
   const { email, password } = parsed.data;
 
-  const parent = db.prepare('SELECT id, password_hash, display_name, tier FROM parents WHERE email = ?').get(
-    email.toLowerCase()
-  ) as { id: string; password_hash: string; display_name: string; tier: string } | undefined;
+  const parent = await queryOne<{ id: string; password_hash: string; display_name: string; tier: string }>(
+    'SELECT id, password_hash, display_name, tier FROM parents WHERE email = $1',
+    [email.toLowerCase()]
+  );
 
   if (!parent) {
     res.status(401).json({ error: 'Invalid email or password' });
@@ -115,9 +121,10 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
   const now = Date.now();
   const token = issueToken(parent.id, sessionId);
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-  db.prepare(
-    'INSERT INTO sessions (id, parent_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)'
-  ).run(sessionId, parent.id, tokenHash, now + 7 * 24 * 60 * 60 * 1000, now);
+  await execute(
+    'INSERT INTO sessions (id, parent_id, token_hash, expires_at, created_at) VALUES ($1, $2, $3, $4, $5)',
+    [sessionId, parent.id, tokenHash, now + 7 * 24 * 60 * 60 * 1000, now]
+  );
 
   startAppSession(parent.id, sessionId);
   setSessionCookie(res, token);
@@ -132,24 +139,25 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
   res.json({ id: parent.id, email: email.toLowerCase(), displayName: parent.display_name, tier: parent.tier });
 });
 
-router.post('/logout', (req: AuthRequest, res: Response): void => {
+router.post('/logout', async (req: AuthRequest, res: Response): Promise<void> => {
   const token = req.cookies?.token;
   if (token) {
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(tokenHash);
+    await execute('DELETE FROM sessions WHERE token_hash = $1', [tokenHash]);
   }
   res.clearCookie('token');
   res.json({ ok: true });
 });
 
-router.get('/me', (req: AuthRequest, res: Response): void => {
+router.get('/me', async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.parentId) {
     res.status(401).json({ error: 'Not authenticated' });
     return;
   }
-  const parent = db.prepare('SELECT id, email, display_name, tier FROM parents WHERE id = ?').get(
-    req.parentId
-  ) as { id: string; email: string; display_name: string; tier: string } | undefined;
+  const parent = await queryOne<{ id: string; email: string; display_name: string; tier: string }>(
+    'SELECT id, email, display_name, tier FROM parents WHERE id = $1',
+    [req.parentId]
+  );
 
   if (!parent) {
     res.status(404).json({ error: 'Account not found' });

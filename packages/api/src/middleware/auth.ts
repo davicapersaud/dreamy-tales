@@ -1,14 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { db } from '../db/client.js';
+import { queryOne } from '../db/client.js';
 
 export interface AuthRequest extends Request {
   parentId?: string;
   appSessionId?: string;
 }
 
-export function requireAuth(req: AuthRequest, res: Response, next: NextFunction): void {
+export async function requireAuth(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   const token = req.cookies?.token;
   if (!token) {
     res.status(401).json({ error: 'Not authenticated' });
@@ -20,9 +20,10 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
     const payload = jwt.verify(token, secret) as { sub: string; sid: string };
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
-    const session = db.prepare(
-      'SELECT id FROM sessions WHERE token_hash = ? AND expires_at > ?'
-    ).get(tokenHash, Date.now()) as { id: string } | undefined;
+    const session = await queryOne<{ id: string }>(
+      'SELECT id FROM sessions WHERE token_hash = $1 AND expires_at > $2',
+      [tokenHash, Date.now()]
+    );
 
     if (!session) {
       res.status(401).json({ error: 'Session expired' });
