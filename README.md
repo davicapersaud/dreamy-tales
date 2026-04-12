@@ -1,6 +1,6 @@
 # Dreamy Tales ⭐
 
-AI-powered bedtime story generator for children ages 4–7. Built with the **Stardust Pop** design system.
+AI-powered bedtime story generator for children ages 3–10. Built with the **Stardust Pop** design system.
 
 ## Running Locally
 
