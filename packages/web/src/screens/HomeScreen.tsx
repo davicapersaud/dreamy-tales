@@ -132,7 +132,25 @@ export default function HomeScreen() {
       {/* Theme picker */}
       <div style={{ padding: '20px 24px 0' }}>
         <div className="row-label">Pick a world!</div>
-        <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
+        <div
+          style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none', cursor: 'grab', userSelect: 'none' }}
+          onMouseDown={(e) => {
+            const el = e.currentTarget;
+            el.dataset.dragging = 'true';
+            el.dataset.startX = String(e.pageX - el.offsetLeft);
+            el.dataset.scrollLeft = String(el.scrollLeft);
+            el.style.cursor = 'grabbing';
+          }}
+          onMouseMove={(e) => {
+            const el = e.currentTarget;
+            if (el.dataset.dragging !== 'true') return;
+            const x = e.pageX - el.offsetLeft;
+            const walk = x - Number(el.dataset.startX);
+            el.scrollLeft = Number(el.dataset.scrollLeft) - walk;
+          }}
+          onMouseUp={(e) => { e.currentTarget.dataset.dragging = 'false'; e.currentTarget.style.cursor = 'grab'; }}
+          onMouseLeave={(e) => { e.currentTarget.dataset.dragging = 'false'; e.currentTarget.style.cursor = 'grab'; }}
+        >
           {THEME_OPTIONS.map((t) => (
             <button
               key={t.label}

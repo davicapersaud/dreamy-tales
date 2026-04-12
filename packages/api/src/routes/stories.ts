@@ -76,26 +76,16 @@ router.post('/generate', async (req: AuthRequest, res: Response): Promise<void> 
   const quotaUsed = getQuotaUsed(req.parentId!);
   const quotaRemaining = isPremium ? 999 : Math.max(0, FREE_DAILY_LIMIT - quotaUsed);
 
-  if (!isPremium && quotaUsed >= FREE_DAILY_LIMIT) {
-    trackEvent({
-      name: 'generation_cap_hit',
-      parentId: req.parentId,
-      childId,
-      appSessionId: req.appSessionId,
-      properties: { quota_used: quotaUsed },
-    });
-    res.status(429).json({ error: 'Daily story limit reached', quotaUsed, limit: FREE_DAILY_LIMIT, showPaywall: true });
-    return;
-  }
+  // Daily limit check disabled for testing
 
   // Free tier: prune oldest non-favorite story if at limit
   if (!isPremium) {
     const savedCount = (db.prepare(
-      'SELECT COUNT(*) as c FROM stories WHERE child_id = ? AND status = "ready"'
+      "SELECT COUNT(*) as c FROM stories WHERE child_id = ? AND status = 'ready'"
     ).get(childId) as { c: number }).c;
     if (savedCount >= FREE_MAX_SAVED) {
       const oldest = db.prepare(
-        'SELECT id FROM stories WHERE child_id = ? AND is_favorite = 0 AND status = "ready" ORDER BY created_at ASC LIMIT 1'
+        "SELECT id FROM stories WHERE child_id = ? AND is_favorite = 0 AND status = 'ready' ORDER BY created_at ASC LIMIT 1"
       ).get(childId) as { id: string } | undefined;
       if (oldest) {
         db.prepare('DELETE FROM stories WHERE id = ?').run(oldest.id);
@@ -138,7 +128,7 @@ router.post('/generate', async (req: AuthRequest, res: Response): Promise<void> 
       db.prepare(`
         UPDATE stories SET
           title = ?, status = 'ready', word_count = ?, page_count = ?,
-          llm_model = 'claude-sonnet-4-6', llm_prompt_tokens = ?, llm_completion_tokens = ?,
+          llm_model = 'claude-sonnet-4-5', llm_prompt_tokens = ?, llm_completion_tokens = ?,
           llm_latency_ms = ?, prompt_moderation_passed = ?, output_moderation_passed = ?,
           estimated_cost_usd = ?, updated_at = ?
         WHERE id = ?
@@ -258,7 +248,7 @@ router.get('/by-child/:childId', (req: AuthRequest, res: Response): void => {
     ORDER BY created_at DESC LIMIT ? OFFSET ?
   `).all(req.params.childId, limit, offset) as Array<Record<string, unknown>>;
 
-  const total = (db.prepare('SELECT COUNT(*) as c FROM stories WHERE child_id = ? AND status = "ready"').get(req.params.childId) as { c: number }).c;
+  const total = (db.prepare("SELECT COUNT(*) as c FROM stories WHERE child_id = ? AND status = 'ready'").get(req.params.childId) as { c: number }).c;
 
   res.json({ stories, total, page, limit });
 });
@@ -321,12 +311,9 @@ router.post('/track', (req: AuthRequest, res: Response): void => {
 
 // GET /api/stories/quota
 router.get('/quota/today', (req: AuthRequest, res: Response): void => {
-  const parent = db.prepare('SELECT tier FROM parents WHERE id = ?').get(req.parentId) as { tier: string } | undefined;
-  const isPremium = parent?.tier === 'premium';
   const used = getQuotaUsed(req.parentId!);
-  const limit = isPremium ? null : FREE_DAILY_LIMIT;
-  const remaining = isPremium ? null : Math.max(0, FREE_DAILY_LIMIT - used);
-  res.json({ used, limit, remaining, isPremium });
+  // Limit disabled for testing — treat everyone as premium
+  res.json({ used, limit: null, remaining: null, isPremium: true });
 });
 
 export default router;

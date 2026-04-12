@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch --env-file=../../.env src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.36.3",
+    "@google/generative-ai": "^0.24.0",
     "argon2": "^0.41.1",
     "better-sqlite3": "^11.7.0",
     "cookie-parser": "^1.4.7",

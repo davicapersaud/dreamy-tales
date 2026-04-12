@@ -4,6 +4,9 @@ dist/
 data/dreamy-tales.db
 data/dreamy-tales.db-shm
 data/dreamy-tales.db-wal
+packages/api/data/dreamy-tales.db
+packages/api/data/dreamy-tales.db-shm
+packages/api/data/dreamy-tales.db-wal
 data/illustrations/
 *.log
 .DS_Store

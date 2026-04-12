@@ -6,7 +6,7 @@ import rateLimit from 'express-rate-limit';
 import { requireAuth } from './middleware/auth.js';
 
 // Startup validation
-const required = ['ANTHROPIC_API_KEY', 'SESSION_SECRET'];
+const required = ['GEMINI_API_KEY', 'SESSION_SECRET'];
 const missing = required.filter((k) => !process.env[k]);
 if (missing.length > 0) {
   console.error(`[startup] Missing required env vars: ${missing.join(', ')}`);

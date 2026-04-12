@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { stories as storiesApi, Story } from '../api/client';
 import StoryIllustration from '../components/StoryIllustration';
@@ -11,6 +11,7 @@ export default function StoryScreen() {
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
   const [toast, setToast] = useState('');
+  const textCardRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -24,6 +25,11 @@ export default function StoryScreen() {
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Scroll text card to top on page change
+  useEffect(() => {
+    textCardRef.current?.scrollTo({ top: 0 });
+  }, [page]);
 
   // Track page views
   useEffect(() => {
@@ -122,7 +128,7 @@ export default function StoryScreen() {
       </div>
 
       {/* Story text card */}
-      <div style={{ margin: '14px 20px 0', padding: '18px', background: 'var(--navy-light)', borderRadius: 20, border: '2px solid rgba(255,255,255,0.05)', flex: 1, overflowY: 'auto' }}>
+      <div ref={textCardRef} style={{ margin: '14px 20px 0', padding: '18px', background: 'var(--navy-light)', borderRadius: 20, border: '2px solid rgba(255,255,255,0.05)', flex: 1, overflowY: 'auto' }}>
         {page === 0 ? (
           <div style={{ textAlign: 'center', paddingTop: 8 }}>
             <div className="ff-fredoka" style={{ fontSize: 22, color: 'var(--yellow)', marginBottom: 8 }}>{story.title}</div>

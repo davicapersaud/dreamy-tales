@@ -1,9 +1,9 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { db } from '../db/client.js';
 import { moderateText, getFallbackStory, GeneratedStory } from './moderation.js';
 import { trackEvent } from './telemetry.js';
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 interface Child {
   id: string;
@@ -23,12 +23,20 @@ function getRecentThemes(childId: string): string {
   return rows.map((r) => `• "${r.title}": ${r.theme_summary}`).join('\n');
 }
 
+function getStoryLength(age: number): { pages: number; wordsMin: number; wordsMax: number } {
+  if (age <= 4) return { pages: 3, wordsMin: 50, wordsMax: 70 };
+  if (age <= 6) return { pages: 4, wordsMin: 80, wordsMax: 100 };
+  if (age <= 8) return { pages: 4, wordsMin: 100, wordsMax: 130 };
+  return { pages: 5, wordsMin: 120, wordsMax: 150 };
+}
+
 function buildSystemPrompt(child: Child, interests: string[]): string {
   const recentThemes = getRecentThemes(child.id);
   const interestList = interests.join(', ');
   const nameNote = child.name_pronunciation
     ? ` (pronounced: ${child.name_pronunciation})`
     : '';
+  const { pages, wordsMin, wordsMax } = getStoryLength(child.age);
 
   return `You are a master children's storyteller writing for a child aged ${child.age} years old.
 
@@ -37,7 +45,7 @@ STYLE RULES:
 - Sentences: short to medium. Avoid complex subordinate clauses.
 - Tone: warm, safe, magical, and cozy. Every story ends happily.
 - The protagonist is always named "${child.name}"${nameNote} and their favorite things (${interestList}) are woven into the story naturally.
-- Length: 4 pages total, each page 80-120 words.
+- Length: ${pages} pages total, each page ${wordsMin}-${wordsMax} words.
 
 CONTENT RULES (absolute — never break these):
 - No violence, fear, darkness, or scary themes whatsoever.
@@ -67,8 +75,9 @@ function buildUserPrompt(child: Child, interests: string[], themePrompt?: string
   const themeNote = themePrompt
     ? `Tonight's special theme from the parent: "${themePrompt}"`
     : `No specific theme tonight — create something magical based on their interests!`;
+  const { pages } = getStoryLength(child.age);
 
-  return `Create a 4-page bedtime story for ${child.name} (age ${child.age}).
+  return `Create a ${pages}-page bedtime story for ${child.name} (age ${child.age}).
 Their favorite things: ${interestList}.
 ${themeNote}
 
@@ -134,22 +143,24 @@ export async function generateStory(
   const systemPrompt = buildSystemPrompt(child, interests);
   const userPrompt = buildUserPrompt(child, interests, themePrompt);
 
-  // Call Claude
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 2048,
-    system: systemPrompt,
-    messages: [{ role: 'user', content: userPrompt }],
+  // Call Gemini
+  const geminiModel = genAI.getGenerativeModel({
+    model: 'gemini-2.5-flash-lite',
+    systemInstruction: systemPrompt,
+  });
+  const result = await geminiModel.generateContent({
+    contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+    generationConfig: { maxOutputTokens: 2048 },
   });
 
   const latencyMs = Date.now() - startTime;
-  const rawText = response.content[0].type === 'text' ? response.content[0].text : '';
-  const promptTokens = response.usage.input_tokens;
-  const completionTokens = response.usage.output_tokens;
+  const rawText = result.response.text();
+  const promptTokens = result.response.usageMetadata?.promptTokenCount ?? 0;
+  const completionTokens = result.response.usageMetadata?.candidatesTokenCount ?? 0;
 
-  // Claude claude-sonnet-4-6 pricing (approximate): $3/$15 per 1M tokens in/out
+  // gemini-2.5-flash-lite pricing (approximate): $0.10/$0.40 per 1M tokens in/out
   const estimatedCostUsd =
-    (promptTokens / 1_000_000) * 3 + (completionTokens / 1_000_000) * 15;
+    (promptTokens / 1_000_000) * 0.10 + (completionTokens / 1_000_000) * 0.40;
 
   // Post-moderation: check the generated story
   let outputModPassed = true;

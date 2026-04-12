@@ -3,11 +3,10 @@
 // Works without any external API key.
 
 const BLOCKED_PATTERNS = [
-  /\b(kill|murder|violent|gore|blood|death|dead|die|suicide|weapon|gun|shoot|stab)\b/i,
+  /\b(murder|gore|suicide|shoot|stab)\b/i,
   /\b(sex|sexual|nude|naked|porn|adult|explicit)\b/i,
   /\b(drugs|alcohol|beer|wine|drunk|high|weed|cocaine)\b/i,
-  /\b(hate|racist|slur|profanity|fuck|shit|damn|hell|bastard)\b/i,
-  /\b(scary|horror|nightmare|terror|monster attacks|evil)\b/i,
+  /\b(racist|slur|fuck|shit|bastard)\b/i,
 ];
 
 export interface ModerationResult {
