@@ -1,0 +1,7 @@
+{
+  "build": { "builder": "NIXPACKS" },
+  "deploy": {
+    "startCommand": "npm run build --workspace=packages/api && npm run start --workspace=packages/api",
+    "restartPolicyType": "ON_FAILURE"
+  }
+}
