@@ -23,12 +23,12 @@ npm run dev
 | Frontend    | React + Vite + TypeScript   |
 | Backend     | Express + TypeScript        |
 | Database    | SQLite (local file)         |
-| AI          | Anthropic Claude claude-sonnet-4-6    |
+| AI          | Google Gemini 2.5 Flash Lite        |
 | Auth        | JWT + argon2id              |
 
 ## Environment
 
-Copy `.env.example` → `.env` and fill in your Anthropic API key.
+Copy `.env.example` → `.env` and fill in your Gemini API key.
 
 ## Project Structure
 
