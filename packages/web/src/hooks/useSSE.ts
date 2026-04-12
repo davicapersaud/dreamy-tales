@@ -19,7 +19,7 @@ export function useSSE(storyId: string | null, onEvent: (e: SSEEvent) => void) {
     if (!storyId) return;
     close();
 
-    const es = new EventSource(`/api/stories/${storyId}/events`, { withCredentials: true });
+    const es = new EventSource(`${import.meta.env.VITE_API_URL}/api/stories/${storyId}/events`, { withCredentials: true });
     esRef.current = es;
 
     es.onmessage = (e) => {
