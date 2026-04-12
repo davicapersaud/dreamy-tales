@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dreamy Tales — Architecture Diagram</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:   #0d1b3e;
+    --navy2:  #0f2252;
+    --card:   #142047;
+    --card2:  #1a2d5e;
+    --gold:   #ffd53d;
+    --gold2:  #ffb800;
+    --teal:   #4ecdc4;
+    --pink:   #ff6b8a;
+    --purple: #a78bfa;
+    --green:  #6ee7b7;
+    --orange: #fb923c;
+    --blue:   #60a5fa;
+    --red:    #f87171;
+    --text:   #e2e8f0;
+    --muted:  rgba(226,232,240,.45);
+  }
+
+  body {
+    background: var(--navy);
+    color: var(--text);
+    font-family: system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    padding: 40px 32px 80px;
+  }
+
+  /* ─── PAGE HEADER ─── */
+  .page-header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .page-header h1 {
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--gold);
+    letter-spacing: -0.5px;
+  }
+  .page-header p {
+    color: var(--muted);
+    font-size: 14px;
+    margin-top: 6px;
+  }
+  .badge-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+  .badge {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1.5px solid;
+  }
+
+  /* ─── MAIN CANVAS ─── */
+  .canvas {
+    max-width: 1300px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* ─── ROW LAYOUT ─── */
+  .row {
+    display: flex;
+    gap: 20px;
+    align-items: stretch;
+    position: relative;
+  }
+  .row + .row { margin-top: 0; }
+
+  /* ─── CONNECTOR SVG ─── */
+  .connector-row {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    height: 60px;
+    position: relative;
+  }
+
+  /* ─── SECTION BOXES ─── */
+  .section {
+    border-radius: 18px;
+    border: 1.5px solid;
+    padding: 20px 22px 22px;
+    background: var(--card);
+    position: relative;
+    transition: box-shadow .2s;
+    flex: 1;
+  }
+  .section:hover {
+    box-shadow: 0 0 32px rgba(255,213,61,.08);
+  }
+  .section-title {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* colour variants */
+  .sec-frontend  { border-color: rgba(167,139,250,.4); }
+  .sec-frontend .section-title { color: var(--purple); }
+  .sec-frontend .dot { background: var(--purple); }
+
+  .sec-api       { border-color: rgba(78,205,196,.4); }
+  .sec-api .section-title { color: var(--teal); }
+  .sec-api .dot { background: var(--teal); }
+
+  .sec-service   { border-color: rgba(110,231,183,.4); }
+  .sec-service .section-title { color: var(--green); }
+  .sec-service .dot { background: var(--green); }
+
+  .sec-db        { border-color: rgba(96,165,250,.4); }
+  .sec-db .section-title { color: var(--blue); }
+  .sec-db .dot { background: var(--blue); }
+
+  .sec-external  { border-color: rgba(251,146,60,.4); }
+  .sec-external .section-title { color: var(--orange); }
+  .sec-external .dot { background: var(--orange); }
+
+  .sec-security  { border-color: rgba(248,113,113,.4); }
+  .sec-security .section-title { color: var(--red); }
+  .sec-security .dot { background: var(--red); }
+
+  /* ─── CHIP GRID ─── */
+  .chip-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chip {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 8px;
+    background: var(--card2);
+    border: 1px solid rgba(255,255,255,.08);
+    color: var(--text);
+    cursor: default;
+    transition: border-color .15s, background .15s;
+    position: relative;
+  }
+  .chip:hover { border-color: rgba(255,255,255,.25); background: #223068; }
+  .chip.gold   { background: rgba(255,213,61,.12); border-color: rgba(255,213,61,.3); color: var(--gold); }
+  .chip.teal   { background: rgba(78,205,196,.1);  border-color: rgba(78,205,196,.3); color: var(--teal); }
+  .chip.purple { background: rgba(167,139,250,.1); border-color: rgba(167,139,250,.3); color: var(--purple); }
+  .chip.green  { background: rgba(110,231,183,.1); border-color: rgba(110,231,183,.3); color: var(--green); }
+  .chip.orange { background: rgba(251,146,60,.1);  border-color: rgba(251,146,60,.3);  color: var(--orange); }
+  .chip.blue   { background: rgba(96,165,250,.1);  border-color: rgba(96,165,250,.3);  color: var(--blue); }
+  .chip.red    { background: rgba(248,113,113,.1); border-color: rgba(248,113,113,.3); color: var(--red); }
+  .chip.pink   { background: rgba(255,107,138,.1); border-color: rgba(255,107,138,.3); color: var(--pink); }
+
+  /* ─── FLOW DIAGRAM (story pipeline) ─── */
+  .flow-steps {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: wrap;
+    row-gap: 10px;
+    margin-top: 4px;
+  }
+  .flow-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 4px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: var(--card2);
+    border: 1px solid rgba(255,255,255,.08);
+    font-size: 11px;
+    font-weight: 600;
+    min-width: 88px;
+    position: relative;
+  }
+  .flow-step .step-icon { font-size: 20px; }
+  .flow-step .step-label { color: var(--text); line-height: 1.3; }
+  .flow-step .step-sub { color: var(--muted); font-size: 10px; font-weight: 400; }
+  .flow-arrow {
+    font-size: 18px;
+    color: var(--muted);
+    padding: 0 2px;
+    flex-shrink: 0;
+  }
+  .flow-step.highlight-green { border-color: rgba(110,231,183,.35); background: rgba(110,231,183,.06); }
+  .flow-step.highlight-red   { border-color: rgba(248,113,113,.35); background: rgba(248,113,113,.06); }
+  .flow-step.highlight-gold  { border-color: rgba(255,213,61,.35);  background: rgba(255,213,61,.06);  }
+  .flow-step.highlight-orange{ border-color: rgba(251,146,60,.35);  background: rgba(251,146,60,.06);  }
+  .flow-step.highlight-teal  { border-color: rgba(78,205,196,.35);  background: rgba(78,205,196,.06);  }
+
+  /* ─── DB TABLE CARDS ─── */
+  .db-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  .db-table {
+    background: var(--card2);
+    border: 1px solid rgba(96,165,250,.2);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 11px;
+  }
+  .db-table .tname {
+    font-weight: 700;
+    color: var(--blue);
+    font-size: 12px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .db-table .cols {
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .db-table .cols span { color: var(--text); font-weight: 500; }
+  .db-table .cols .pk { color: var(--gold); }
+  .db-table .cols .fk { color: var(--teal); }
+
+  /* ─── ARROW CONNECTORS ─── */
+  .arrow-container {
+    position: relative;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 80px;
+  }
+  .arrow-line {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .arrow-line .label {
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .4px;
+    white-space: nowrap;
+  }
+  .arrow-line .shaft {
+    width: 2px;
+    flex: 1;
+    position: relative;
+  }
+  .arrow-line .shaft::after {
+    content: '▼';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+  }
+  /* Animated pulse dot on arrows */
+  @keyframes flow-pulse {
+    0%   { top: 0; opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
+  .arrow-line .shaft .pulse {
+    position: absolute;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    left: 50%;
+    transform: translateX(-50%);
+    animation: flow-pulse 1.6s linear infinite;
+  }
+
+  /* ─── SVG ARROWS (big picture connectors) ─── */
+  .arch-svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  /* ─── TRADEOFFS SECTION ─── */
+  .insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 18px;
+    max-width: 1300px;
+    margin: 48px auto 0;
+  }
+  .insight-card {
+    background: var(--card);
+    border-radius: 16px;
+    border: 1.5px solid rgba(255,255,255,.07);
+    padding: 20px 22px;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .insight-card:hover {
+    border-color: rgba(255,213,61,.2);
+    box-shadow: 0 0 24px rgba(255,213,61,.06);
+  }
+  .insight-card .ic-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .insight-card .ic-icon { font-size: 22px; }
+  .insight-card .ic-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--gold);
+  }
+  .insight-card .ic-sub {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+  }
+  .insight-card p {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.7;
+  }
+  .risk-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 10px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .risk-row .badge2 {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    letter-spacing: .4px;
+    text-transform: uppercase;
+  }
+  .badge2.high   { background: rgba(248,113,113,.2); color: var(--red); }
+  .badge2.med    { background: rgba(251,146,60,.2);  color: var(--orange); }
+  .badge2.low    { background: rgba(110,231,183,.2); color: var(--green); }
+
+  /* ─── SECTION DIVIDERS ─── */
+  .section-divider {
+    text-align: center;
+    margin: 48px 0 28px;
+    position: relative;
+  }
+  .section-divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0; right: 0;
+    height: 1px;
+    background: rgba(255,255,255,.07);
+  }
+  .section-divider span {
+    position: relative;
+    background: var(--navy);
+    padding: 0 20px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ─── DATA FLOW TIMELINE ─── */
+  .timeline {
+    max-width: 1300px;
+    margin: 0 auto;
+    position: relative;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 22px;
+    top: 0; bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--purple), var(--teal), var(--green), var(--orange));
+    border-radius: 2px;
+  }
+  .tl-item {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    padding: 0 0 24px 0;
+    position: relative;
+  }
+  .tl-dot {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    border: 2.5px solid;
+    background: var(--navy);
+    position: relative;
+    z-index: 1;
+  }
+  .tl-content {
+    flex: 1;
+    background: var(--card);
+    border-radius: 14px;
+    border: 1.5px solid rgba(255,255,255,.07);
+    padding: 14px 18px;
+    margin-top: 0;
+  }
+  .tl-content h4 {
+    font-size: 14px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .tl-content p {
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.65;
+  }
+  .tl-content .code-inline {
+    display: inline-block;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 4px;
+    padding: 1px 7px;
+    font-family: 'Menlo', 'Monaco', monospace;
+    font-size: 11px;
+    color: var(--teal);
+  }
+
+  /* ─── LEGEND ─── */
+  .legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 32px;
+  }
+  .leg-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .leg-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Animations */
+  @keyframes shimmer {
+    0%   { opacity: .5; }
+    50%  { opacity: 1; }
+    100% { opacity: .5; }
+  }
+  .anim-pulse { animation: shimmer 2.4s ease-in-out infinite; }
+
+  @keyframes dash-flow {
+    to { stroke-dashoffset: -20; }
+  }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 900px) {
+    .row { flex-direction: column; }
+    .db-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════ PAGE HEADER ════════════════════ -->
+<div class="page-header">
+  <h1>⭐ Dreamy Tales — Architecture & Data Flow</h1>
+  <p>Monorepo · React/Vite Frontend &nbsp;·&nbsp; Express/TypeScript API &nbsp;·&nbsp; SQLite (WAL) &nbsp;·&nbsp; Claude claude-sonnet-4-5</p>
+  <div class="badge-row">
+    <span class="badge" style="color:var(--purple);border-color:rgba(167,139,250,.4)">Frontend :5173</span>
+    <span class="badge" style="color:var(--teal);border-color:rgba(78,205,196,.4)">API :3001</span>
+    <span class="badge" style="color:var(--blue);border-color:rgba(96,165,250,.4)">SQLite WAL</span>
+    <span class="badge" style="color:var(--orange);border-color:rgba(251,146,60,.4)">Anthropic API</span>
+    <span class="badge" style="color:var(--green);border-color:rgba(110,231,183,.4)">JWT Auth</span>
+    <span class="badge" style="color:var(--pink);border-color:rgba(255,107,138,.4)">SSE Streaming</span>
+  </div>
+</div>
+
+<!-- ════════════════════ LEGEND ════════════════════ -->
+<div class="legend">
+  <div class="leg-item"><div class="leg-dot" style="background:var(--purple)"></div>Frontend Layer</div>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--teal)"></div>API / Middleware</div>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--green)"></div>Services</div>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--blue)"></div>Database</div>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--orange)"></div>External APIs</div>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--red)"></div>Security</div>
+</div>
+
+<!-- ════════════════════ ARCHITECTURE CANVAS ════════════════════ -->
+<div class="canvas">
+
+  <!-- ROW 1: Frontend -->
+  <div class="row">
+    <div class="section sec-frontend" style="flex:1">
+      <div class="section-title"><div class="dot"></div>Browser · React + Vite (TypeScript)</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:8px">Screens (React Router)</div>
+          <div class="chip-grid">
+            <span class="chip purple">AuthScreen</span>
+            <span class="chip purple">HomeScreen</span>
+            <span class="chip purple">GenerateScreen</span>
+            <span class="chip purple">StoryScreen</span>
+            <span class="chip purple">LibraryScreen</span>
+            <span class="chip purple">ProfileScreen</span>
+            <span class="chip purple">SettingsScreen</span>
+            <span class="chip purple">PaywallScreen</span>
+          </div>
+        </div>
+        <div style="flex:0 0 auto;min-width:160px">
+          <div style="font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:8px">Custom Hooks</div>
+          <div class="chip-grid">
+            <span class="chip pink">useAuth (Context + JWT)</span>
+            <span class="chip pink">useSSE (EventSource)</span>
+          </div>
+          <div style="margin-top:12px;font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:8px">UI</div>
+          <div class="chip-grid">
+            <span class="chip">StoryIllustration</span>
+            <span class="chip">ConfettiBg</span>
+          </div>
+        </div>
+        <div style="flex:0 0 auto;min-width:160px">
+          <div style="font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:8px">Transport</div>
+          <div class="chip-grid">
+            <span class="chip teal">HTTP REST (fetch)</span>
+            <span class="chip pink">SSE EventSource</span>
+            <span class="chip">Cookie (httpOnly JWT)</span>
+            <span class="chip">Vite proxy → :3001</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONNECTOR: Frontend → API -->
+  <div style="display:flex;justify-content:center;align-items:center;height:52px;gap:60px;position:relative">
+    <div class="arrow-line">
+      <span class="label" style="background:rgba(167,139,250,.15);color:var(--purple);border:1px solid rgba(167,139,250,.3)">HTTP REST (JSON)</span>
+      <div style="width:2px;height:20px;background:var(--purple);margin:2px auto;border-radius:2px;position:relative">
+        <div class="pulse" style="background:var(--purple)"></div>
+      </div>
+      <span style="font-size:12px;color:var(--purple)">▼</span>
+    </div>
+    <div class="arrow-line" style="align-items:center">
+      <span class="label" style="background:rgba(255,107,138,.15);color:var(--pink);border:1px solid rgba(255,107,138,.3)">SSE stream ↑ real-time</span>
+      <div style="width:2px;height:20px;background:var(--pink);margin:2px auto;border-radius:2px"></div>
+      <span style="font-size:12px;color:var(--pink)">▲</span>
+    </div>
+  </div>
+
+  <!-- ROW 2: API Layer -->
+  <div class="row">
+    <!-- Middleware -->
+    <div class="section sec-security" style="flex:0 0 auto;min-width:220px">
+      <div class="section-title"><div class="dot"></div>Middleware Layer</div>
+      <div class="chip-grid" style="flex-direction:column;gap:8px">
+        <span class="chip red" style="display:flex;align-items:center;gap:6px">
+          <span>🔒</span> CORS (origin :5173)
+        </span>
+        <span class="chip red" style="display:flex;align-items:center;gap:6px">
+          <span>⏱</span> Rate Limit (300/min global)
+        </span>
+        <span class="chip red" style="display:flex;align-items:center;gap:6px">
+          <span>🚪</span> Auth Rate (10/min)
+        </span>
+        <span class="chip red" style="display:flex;align-items:center;gap:6px">
+          <span>🔑</span> requireAuth (JWT + DB)
+        </span>
+        <span class="chip" style="display:flex;align-items:center;gap:6px">
+          <span>🍪</span> Cookie Parser
+        </span>
+      </div>
+    </div>
+
+    <!-- Routes -->
+    <div class="section sec-api" style="flex:1">
+      <div class="section-title"><div class="dot"></div>Express API Server · :3001</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+        <div style="background:var(--card2);border:1px solid rgba(78,205,196,.2);border-radius:10px;padding:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--teal);margin-bottom:8px">POST /api/auth</div>
+          <div class="chip-grid">
+            <span class="chip" style="font-size:11px">register</span>
+            <span class="chip" style="font-size:11px">login</span>
+            <span class="chip" style="font-size:11px">logout</span>
+            <span class="chip" style="font-size:11px">me</span>
+          </div>
+        </div>
+        <div style="background:var(--card2);border:1px solid rgba(78,205,196,.2);border-radius:10px;padding:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--teal);margin-bottom:8px">CRUD /api/children</div>
+          <div class="chip-grid">
+            <span class="chip" style="font-size:11px">create profile</span>
+            <span class="chip" style="font-size:11px">update</span>
+            <span class="chip" style="font-size:11px">delete</span>
+          </div>
+        </div>
+        <div style="background:var(--card2);border:1px solid rgba(255,213,61,.25);border-radius:10px;padding:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:8px">★ /api/stories</div>
+          <div class="chip-grid">
+            <span class="chip gold" style="font-size:11px">POST /generate</span>
+            <span class="chip gold" style="font-size:11px">GET /:id/events (SSE)</span>
+            <span class="chip" style="font-size:11px">GET /:id</span>
+            <span class="chip" style="font-size:11px">GET /by-child/:id</span>
+            <span class="chip" style="font-size:11px">PATCH /:id/favorite</span>
+            <span class="chip" style="font-size:11px">DELETE /:id</span>
+            <span class="chip" style="font-size:11px">POST /track</span>
+            <span class="chip" style="font-size:11px">GET /quota/today</span>
+          </div>
+        </div>
+        <div style="background:var(--card2);border:1px solid rgba(78,205,196,.2);border-radius:10px;padding:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--teal);margin-bottom:8px">GET /api/metrics</div>
+          <div class="chip-grid">
+            <span class="chip" style="font-size:11px">totals</span>
+            <span class="chip" style="font-size:11px">latency P50/P95</span>
+            <span class="chip" style="font-size:11px">cost / story</span>
+            <span class="chip" style="font-size:11px">safety rate</span>
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:var(--muted)">+ /dashboard HTML page</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONNECTOR: Routes → Services -->
+  <div style="display:flex;justify-content:center;align-items:center;height:48px;gap:80px">
+    <div class="arrow-line">
+      <span class="label" style="background:rgba(110,231,183,.12);color:var(--green);border:1px solid rgba(110,231,183,.3)">story generation pipeline</span>
+      <div style="width:2px;height:14px;background:var(--green);margin:2px auto;border-radius:2px"></div>
+      <span style="font-size:12px;color:var(--green)">▼</span>
+    </div>
+  </div>
+
+  <!-- ROW 3: Services -->
+  <div class="row">
+    <!-- story-gen -->
+    <div class="section sec-service" style="flex:2">
+      <div class="section-title"><div class="dot"></div>story-gen.ts — Story Generation Service</div>
+      <div class="flow-steps">
+        <div class="flow-step highlight-red">
+          <span class="step-icon">🛡️</span>
+          <span class="step-label">Pre-mod</span>
+          <span class="step-sub">theme prompt</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">
+          <span class="step-icon">📝</span>
+          <span class="step-label">Build Prompt</span>
+          <span class="step-sub">system + user</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step highlight-orange">
+          <span class="step-icon">🤖</span>
+          <span class="step-label">Claude API</span>
+          <span class="step-sub">sonnet-4-5</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">
+          <span class="step-icon">⚙️</span>
+          <span class="step-label">Parse JSON</span>
+          <span class="step-sub">4 pages</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step highlight-red">
+          <span class="step-icon">🛡️</span>
+          <span class="step-label">Post-mod</span>
+          <span class="step-sub">output check</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step highlight-teal">
+          <span class="step-icon">💾</span>
+          <span class="step-label">Save DB</span>
+          <span class="step-sub">stories + pages</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step highlight-green">
+          <span class="step-icon">📡</span>
+          <span class="step-label">Emit SSE</span>
+          <span class="step-sub">story_complete</span>
+        </div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+        <span class="chip green" style="font-size:11px">setImmediate async (non-blocking)</span>
+        <span class="chip" style="font-size:11px">202 Accepted immediately</span>
+        <span class="chip gold" style="font-size:11px">recent themes → avoid repeats</span>
+        <span class="chip" style="font-size:11px">cost tracking ($3/$15 per 1M tokens)</span>
+        <span class="chip teal" style="font-size:11px">in-memory SSE Map (storyId → Set&lt;Response&gt;)</span>
+      </div>
+    </div>
+
+    <!-- moderation + telemetry stacked -->
+    <div style="flex:1;display:flex;flex-direction:column;gap:14px">
+      <div class="section sec-security">
+        <div class="section-title"><div class="dot"></div>moderation.ts</div>
+        <div class="chip-grid" style="gap:6px">
+          <span class="chip red" style="font-size:11px">Regex BLOCKED_PATTERNS</span>
+          <span class="chip" style="font-size:11px">violence / adult / drugs / hate / horror</span>
+          <span class="chip red" style="font-size:11px">Double-gated (pre + post)</span>
+          <span class="chip" style="font-size:11px">getFallbackStory on fail</span>
+        </div>
+      </div>
+      <div class="section sec-service">
+        <div class="section-title"><div class="dot"></div>telemetry.ts</div>
+        <div class="chip-grid" style="gap:6px">
+          <span class="chip green" style="font-size:11px">trackEvent → events table</span>
+          <span class="chip" style="font-size:11px">story_generation_started</span>
+          <span class="chip" style="font-size:11px">story_generation_completed</span>
+          <span class="chip" style="font-size:11px">content_moderation_blocked</span>
+          <span class="chip" style="font-size:11px">story_favorited</span>
+          <span class="chip green" style="font-size:11px">app_sessions lifecycle</span>
+          <span class="chip" style="font-size:11px">pages_read counter</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONNECTOR ROW: Services → DB + External -->
+  <div style="display:flex;gap:20px;align-items:flex-start;height:52px">
+    <div style="flex:2;display:flex;justify-content:center;align-items:center;height:100%">
+      <div class="arrow-line">
+        <span class="label" style="background:rgba(96,165,250,.12);color:var(--blue);border:1px solid rgba(96,165,250,.3)">better-sqlite3 (sync writes)</span>
+        <div style="width:2px;height:14px;background:var(--blue);margin:2px auto;border-radius:2px"></div>
+        <span style="font-size:12px;color:var(--blue)">▼</span>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;justify-content:center;align-items:center;height:100%">
+      <div class="arrow-line">
+        <span class="label" style="background:rgba(251,146,60,.12);color:var(--orange);border:1px solid rgba(251,146,60,.3)">HTTPS (anthropic SDK)</span>
+        <div style="width:2px;height:14px;background:var(--orange);margin:2px auto;border-radius:2px"></div>
+        <span style="font-size:12px;color:var(--orange)">▼</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 4: DB + External -->
+  <div class="row">
+    <!-- SQLite -->
+    <div class="section sec-db" style="flex:2">
+      <div class="section-title"><div class="dot"></div>SQLite Database (WAL mode) · dreamy-tales.db</div>
+      <div class="db-grid">
+        <div class="db-table">
+          <div class="tname">👪 parents</div>
+          <div class="cols">
+            <div><span class="pk">id</span> TEXT PK</div>
+            <div><span>email</span> UNIQUE</div>
+            <div><span>password_hash</span></div>
+            <div><span>tier</span> free | premium</div>
+            <div><span>trial_ends_at</span></div>
+          </div>
+        </div>
+        <div class="db-table">
+          <div class="tname">🔑 sessions</div>
+          <div class="cols">
+            <div><span class="pk">id</span> TEXT PK</div>
+            <div><span class="fk">parent_id</span> FK</div>
+            <div><span>token_hash</span> UNIQUE</div>
+            <div><span>expires_at</span> ms</div>
+          </div>
+        </div>
+        <div class="db-table">
+          <div class="tname">👧 children</div>
+          <div class="cols">
+            <div><span class="pk">id</span> TEXT PK</div>
+            <div><span class="fk">parent_id</span> FK</div>
+            <div><span>name, age, avatar</span></div>
+            <div><span>interests</span> JSON[]</div>
+            <div><span>name_pronunciation</span></div>
+          </div>
+        </div>
+        <div class="db-table" style="border-color:rgba(255,213,61,.25)">
+          <div class="tname" style="color:var(--gold)">📖 stories</div>
+          <div class="cols">
+            <div><span class="pk">id</span> ULID PK</div>
+            <div><span class="fk">child_id, parent_id</span></div>
+            <div><span>status</span> generating|ready|failed</div>
+            <div><span>is_favorite, word_count</span></div>
+            <div><span>llm_model, tokens</span></div>
+            <div><span>llm_latency_ms</span></div>
+            <div><span>estimated_cost_usd</span></div>
+            <div><span>mod_passed ×2</span></div>
+          </div>
+        </div>
+        <div class="db-table">
+          <div class="tname">📄 story_pages</div>
+          <div class="cols">
+            <div><span class="pk">id</span> ULID PK</div>
+            <div><span class="fk">story_id</span> FK</div>
+            <div><span>page_number</span> (1-4)</div>
+            <div><span>text</span></div>
+            <div><span>illustration_prompt</span></div>
+          </div>
+        </div>
+        <div class="db-table">
+          <div class="tname">📊 daily_quotas</div>
+          <div class="cols">
+            <div><span class="pk">(parent_id, date)</span> PK</div>
+            <div><span>stories_generated</span></div>
+            <div style="color:var(--muted);font-size:10px">Free: 3/day limit</div>
+          </div>
+        </div>
+        <div class="db-table">
+          <div class="tname">🎨 story_themes</div>
+          <div class="cols">
+            <div><span class="fk">child_id</span> FK</div>
+            <div><span>title, theme_summary</span></div>
+            <div style="color:var(--muted);font-size:10px">Last 5 → variation</div>
+          </div>
+        </div>
+        <div class="db-table">
+          <div class="tname">📡 events</div>
+          <div class="cols">
+            <div><span>name</span> event type</div>
+            <div><span class="fk">parent_id, child_id</span></div>
+            <div><span>app_session_id</span></div>
+            <div><span>properties</span> JSON</div>
+            <div><span>ts</span> ms timestamp</div>
+          </div>
+        </div>
+        <div class="db-table">
+          <div class="tname">⏱ app_sessions</div>
+          <div class="cols">
+            <div><span class="pk">id</span> TEXT PK</div>
+            <div><span class="fk">parent_id</span> FK</div>
+            <div><span>started_at, ended_at</span></div>
+            <div><span>duration_ms</span></div>
+            <div><span>stories_generated</span></div>
+            <div><span>pages_read</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+        <span class="chip blue" style="font-size:11px">WAL journal_mode</span>
+        <span class="chip" style="font-size:11px">synchronous = NORMAL</span>
+        <span class="chip" style="font-size:11px">cache_size = -32 MB</span>
+        <span class="chip blue" style="font-size:11px">foreign_keys ON</span>
+        <span class="chip" style="font-size:11px">ULID IDs (sortable)</span>
+        <span class="chip" style="font-size:11px">CASCADE deletes</span>
+      </div>
+    </div>
+
+    <!-- External -->
+    <div style="flex:1;display:flex;flex-direction:column;gap:14px">
+      <div class="section sec-external">
+        <div class="section-title"><div class="dot"></div>Anthropic Claude API</div>
+        <div class="chip-grid" style="gap:7px">
+          <span class="chip orange" style="font-size:11px">claude-sonnet-4-5</span>
+          <span class="chip" style="font-size:11px">max_tokens: 2048</span>
+          <span class="chip orange" style="font-size:11px">JSON-only output</span>
+          <span class="chip" style="font-size:11px">system + user messages</span>
+          <span class="chip" style="font-size:11px">~$3 in / $15 out /1M</span>
+          <span class="chip orange" style="font-size:11px">age-appropriate prompt</span>
+          <span class="chip" style="font-size:11px">4 pages × 80-120 words</span>
+          <span class="chip" style="font-size:11px">illustrationPrompt per page</span>
+        </div>
+      </div>
+      <div class="section" style="border-color:rgba(255,213,61,.3);background:rgba(255,213,61,.04)">
+        <div class="section-title" style="color:var(--gold)">
+          <div class="dot" style="background:var(--gold)"></div>Quota &amp; Billing Model
+        </div>
+        <div class="chip-grid" style="gap:7px">
+          <span class="chip gold" style="font-size:11px">Free: 3 stories/day</span>
+          <span class="chip gold" style="font-size:11px">Free: max 10 saved</span>
+          <span class="chip" style="font-size:11px">Auto-prune oldest non-fav</span>
+          <span class="chip gold" style="font-size:11px">Premium: unlimited</span>
+          <span class="chip" style="font-size:11px">daily_quotas table</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div><!-- end .canvas -->
+
+
+<!-- ════════════════════ STORY GENERATION FLOW TIMELINE ════════════════════ -->
+<div class="section-divider"><span>Story Generation Data Flow</span></div>
+<div class="timeline">
+
+  <div class="tl-item">
+    <div class="tl-dot" style="border-color:var(--purple);color:var(--purple)">🖱️</div>
+    <div class="tl-content">
+      <h4 style="color:var(--purple)">1 · Parent submits story request</h4>
+      <p><span class="code-inline">POST /api/stories/generate</span> with <span class="code-inline">{ childId, themePrompt? }</span>. Frontend calls <span class="code-inline">useSSE(storyId)</span> immediately to open an EventSource connection for real-time updates.</p>
+    </div>
+  </div>
+
+  <div class="tl-item">
+    <div class="tl-dot" style="border-color:var(--red);color:var(--red)">🔒</div>
+    <div class="tl-content">
+      <h4 style="color:var(--red)">2 · Auth + Quota validation</h4>
+      <p><span class="code-inline">requireAuth</span> middleware verifies the JWT cookie, hashes it, and checks the <span class="code-inline">sessions</span> table for a live, non-expired row. Then the route queries <span class="code-inline">daily_quotas</span> to enforce free-tier limits.</p>
+    </div>
+  </div>
+
+  <div class="tl-item">
+    <div class="tl-dot" style="border-color:var(--red);color:var(--red)">🛡️</div>
+    <div class="tl-content">
+      <h4 style="color:var(--red)">3 · Pre-moderation of theme prompt</h4>
+      <p><span class="code-inline">moderateText(themePrompt)</span> runs 5 regex patterns for violence, adult content, drugs, profanity, and horror <em>before</em> the Claude API is ever called. If blocked, a <span class="code-inline">MODERATION_BLOCKED</span> error is thrown and the SSE client receives a recoverable error event.</p>
+    </div>
+  </div>
+
+  <div class="tl-item">
+    <div class="tl-dot" style="border-color:var(--teal);color:var(--teal)">📋</div>
+    <div class="tl-content">
+      <h4 style="color:var(--teal)">4 · DB record created → 202 returned immediately</h4>
+      <p>A story row is inserted with <span class="code-inline">status='generating'</span>. The API responds <span class="code-inline">202 Accepted</span> with the <span class="code-inline">storyId</span>. The client is already subscribed to SSE — it will receive events when generation completes. The actual generation runs in <span class="code-inline">setImmediate()</span>, keeping the HTTP request non-blocking.</p>
+    </div>
+  </div>
+
+  <div class="tl-item">
+    <div class="tl-dot" style="border-color:var(--orange);color:var(--orange)">🤖</div>
+    <div class="tl-content">
+      <h4 style="color:var(--orange)">5 · Claude API call (async background)</h4>
+      <p>The system prompt encodes age-appropriate vocabulary rules, the child's name/interests, and the last 5 story themes to prevent repetition. The user prompt adds tonight's optional theme. <span class="code-inline">claude-sonnet-4-5</span> responds with a structured JSON object: <span class="code-inline">{ title, themeSummary, pages[4] }</span>.</p>
+    </div>
+  </div>
+
+  <div class="tl-item">
+    <div class="tl-dot" style="border-color:var(--red);color:var(--red)">🛡️</div>
+    <div class="tl-content">
+      <h4 style="color:var(--red)">6 · Post-moderation on LLM output</h4>
+      <p>All page text is joined and passed through the same <span class="code-inline">moderateText()</span> filter. If any pattern matches the AI output, <span class="code-inline">getFallbackStory()</span> replaces the generated content with a pre-written safe story. This double-gate ensures no harmful content reaches children even if the LLM misbehaves.</p>
+    </div>
+  </div>
+
+  <div class="tl-item">
+    <div class="tl-dot" style="border-color:var(--blue);color:var(--blue)">💾</div>
+    <div class="tl-content">
+      <h4 style="color:var(--blue)">7 · Persist to SQLite + emit SSE</h4>
+      <p>Story row updated to <span class="code-inline">status='ready'</span> with token/latency/cost metadata. 4 rows inserted into <span class="code-inline">story_pages</span>. Theme summary saved to <span class="code-inline">story_themes</span> for future variation. Then <span class="code-inline">emitSSE(storyId, { type: 'story_complete' })</span> fires — the client navigates to the story view.</p>
+    </div>
+  </div>
+
+  <div class="tl-item">
+    <div class="tl-dot" style="border-color:var(--green);color:var(--green)">📊</div>
+    <div class="tl-content">
+      <h4 style="color:var(--green)">8 · Telemetry recorded throughout</h4>
+      <p><span class="code-inline">trackEvent()</span> writes to the <span class="code-inline">events</span> table at generation start, completion (with latency + cost), moderation blocks, and favorites. The <span class="code-inline">app_sessions</span> table tracks session duration and pages read. All surfaced via <span class="code-inline">/api/metrics</span> and the <span class="code-inline">/dashboard</span> HTML page.</p>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ════════════════════ TRADEOFFS + RISKS ════════════════════ -->
+<div class="section-divider"><span>Design Tradeoffs · Technical Insights · Risk Management</span></div>
+
+<div class="insights-grid">
+
+  <div class="insight-card">
+    <div class="ic-head">
+      <span class="ic-icon">⚡</span>
+      <div>
+        <div class="ic-title">Async Story Generation (202 + SSE)</div>
+        <div class="ic-sub">Architecture Tradeoff</div>
+      </div>
+    </div>
+    <p><strong style="color:var(--green)">Why:</strong> Claude can take 4–8s+ to generate a story. A synchronous response would time out or block the HTTP connection. By returning 202 immediately and pushing <code>story_complete</code> over SSE, the UI stays responsive and shows a live loading state.</p>
+    <p style="margin-top:8px"><strong style="color:var(--red)">Risk:</strong> In-memory SSE client Map is lost on server restart. Clients reconnecting after a restart won't receive the event — but the SSE handler falls back to polling: if the story is already <code>status='ready'</code>, it emits immediately on reconnect.</p>
+  </div>
+
+  <div class="insight-card">
+    <div class="ic-head">
+      <span class="ic-icon">🛡️</span>
+      <div>
+        <div class="ic-title">Double-Gate Content Moderation</div>
+        <div class="ic-sub">Safety Design</div>
+      </div>
+    </div>
+    <p><strong style="color:var(--green)">Why:</strong> Regex pre-moderation stops bad prompts from reaching the Claude API (saves cost). Regex post-moderation catches the rare case where the LLM produces unsafe output despite the system prompt guardrails.</p>
+    <p style="margin-top:8px"><strong style="color:var(--red)">Risk:</strong> Regex is brittle — it can't understand context ("he <em>shot</em> a basket" would be blocked). Upgrading to a dedicated moderation API (e.g., Claude's own moderation or OpenAI Moderation) would reduce false positives while improving catch rate.</p>
+  </div>
+
+  <div class="insight-card">
+    <div class="ic-head">
+      <span class="ic-icon">🗄️</span>
+      <div>
+        <div class="ic-title">SQLite with WAL Mode</div>
+        <div class="ic-sub">Database Tradeoff</div>
+      </div>
+    </div>
+    <p><strong style="color:var(--green)">Why:</strong> Zero-config, embedded, no network overhead, fast for a single-server app. WAL mode allows concurrent readers while writes are happening — critical when telemetry writes happen alongside story fetches.</p>
+    <p style="margin-top:8px"><strong style="color:var(--orange)">Scaling limit:</strong> SQLite doesn't support multiple write processes. At scale (multiple API instances), you'd need to migrate to Postgres. The synchronous <code>better-sqlite3</code> writes also block the Node.js event loop — acceptable at low concurrency, but a bottleneck under load.</p>
+  </div>
+
+  <div class="insight-card">
+    <div class="ic-head">
+      <span class="ic-icon">🔑</span>
+      <div>
+        <div class="ic-title">JWT + Token Hash Session Model</div>
+        <div class="ic-sub">Auth Architecture</div>
+      </div>
+    </div>
+    <p><strong style="color:var(--green)">Why:</strong> JWTs are stateless and fast to verify. Storing the token <em>hash</em> in the DB (not the raw token) allows server-side revocation — you get the best of both: fast validation and the ability to log users out.</p>
+    <p style="margin-top:8px"><strong style="color:var(--orange)">Note:</strong> httpOnly cookies protect against XSS. CORS is locked to <code>:5173</code>. The auth rate limit (10 req/min) prevents brute-force. No refresh token flow means sessions expire without renewal.</p>
+  </div>
+
+  <div class="insight-card">
+    <div class="ic-head">
+      <span class="ic-icon">🎯</span>
+      <div>
+        <div class="ic-title">Theme Variation System</div>
+        <div class="ic-sub">Product Insight</div>
+      </div>
+    </div>
+    <p><strong style="color:var(--green)">How:</strong> The last 5 story themes per child are fetched from <code>story_themes</code> and injected into the system prompt as "RECENT STORIES TO AVOID REPEATING." This costs only a tiny amount of extra tokens but significantly improves story novelty.</p>
+    <p style="margin-top:8px"><strong style="color:var(--blue)">Future:</strong> Could be extended to track themes across a sliding window (30 days), or use semantic similarity to avoid thematically similar stories even if keyword-different.</p>
+  </div>
+
+  <div class="insight-card">
+    <div class="ic-head">
+      <span class="ic-icon">💰</span>
+      <div>
+        <div class="ic-title">Cost Tracking + Freemium Model</div>
+        <div class="ic-sub">Business Model</div>
+      </div>
+    </div>
+    <p>Every story records <code>llm_prompt_tokens</code>, <code>llm_completion_tokens</code>, and <code>estimated_cost_usd</code>. The metrics API surfaces P50/P95 latency, cost/story, and 7-day spend. Free tier caps at 3 stories/day + 10 saved (auto-prune oldest non-favorite).</p>
+    <p style="margin-top:8px"><strong style="color:var(--orange)">Risk:</strong> Cost estimate is approximate (hardcoded rates). Token pricing changes should be updated in <code>story-gen.ts:152</code>. No billing integration yet — premium tier exists in DB schema but isn't enforced.</p>
+  </div>
+
+  <div class="insight-card">
+    <div class="ic-head">
+      <span class="ic-icon">📊</span>
+      <div>
+        <div class="ic-title">Built-in Observability</div>
+        <div class="ic-sub">Technical Insight</div>
+      </div>
+    </div>
+    <p>The telemetry layer tracks: story generation lifecycle, moderation blocks (with stage + reason), session length, pages read, and per-story cost. KPIs are computed via SQL queries in <code>/api/metrics</code>: stories/user/week, avg session length, safety pass rate.</p>
+    <p style="margin-top:8px"><strong style="color:var(--blue)">Strength:</strong> No external analytics dependency. Everything is queryable from SQLite. The metrics dashboard auto-refreshes every 30s and requires only an authenticated session.</p>
+  </div>
+
+  <!-- Risk matrix -->
+  <div class="insight-card" style="grid-column: 1 / -1">
+    <div class="ic-head">
+      <span class="ic-icon">⚠️</span>
+      <div>
+        <div class="ic-title">Risk Register</div>
+        <div class="ic-sub">Priority Issues to Address</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-top:4px">
+      <div class="risk-row">
+        <span class="badge2 high">HIGH</span>
+        <span><strong>No image generation:</strong> <code>illustrationPrompt</code> is stored but never rendered as an actual image. The UI shows text-only stories — a core product promise unimplemented.</span>
+      </div>
+      <div class="risk-row">
+        <span class="badge2 high">HIGH</span>
+        <span><strong>Daily limit disabled:</strong> Freemium quota check is present in code but commented out ("disabled for testing") — all users have unlimited generations, burning real API budget.</span>
+      </div>
+      <div class="risk-row">
+        <span class="badge2 high">HIGH</span>
+        <span><strong>SQLite single-file:</strong> No backup strategy. Data is on-disk only. A server crash without a backup = complete data loss.</span>
+      </div>
+      <div class="risk-row">
+        <span class="badge2 med">MED</span>
+        <span><strong>In-memory SSE state:</strong> Server restart silently loses all pending story subscriptions. Clients must reconnect and poll.</span>
+      </div>
+      <div class="risk-row">
+        <span class="badge2 med">MED</span>
+        <span><strong>Regex moderation false positives:</strong> Innocent words like "die" (as in coloring dye) or "shot" (basketball) will be blocked.</span>
+      </div>
+      <div class="risk-row">
+        <span class="badge2 med">MED</span>
+        <span><strong>No HTTPS enforced:</strong> JWT cookies over HTTP in development. Production deployment must enforce HTTPS and set <code>Secure</code> cookie flag.</span>
+      </div>
+      <div class="risk-row">
+        <span class="badge2 low">LOW</span>
+        <span><strong>No refresh token:</strong> Sessions expire without renewal. Long reading sessions could expire mid-story without a silent refresh mechanism.</span>
+      </div>
+      <div class="risk-row">
+        <span class="badge2 low">LOW</span>
+        <span><strong>Cost rates hardcoded:</strong> Anthropic pricing changes would silently produce incorrect cost metrics until <code>story-gen.ts:152</code> is updated.</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div style="text-align:center;margin-top:56px;color:var(--muted);font-size:12px;padding-bottom:40px">
+  ⭐ Dreamy Tales Architecture · Generated 2026-03-05 · claude-sonnet-4-6
+</div>
+
+</body>
+</html>
