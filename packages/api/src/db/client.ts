@@ -129,6 +129,21 @@ export async function initDb(): Promise<void> {
     `CREATE INDEX IF NOT EXISTS idx_app_sessions_parent ON app_sessions(parent_id, started_at DESC)`,
   ];
 
+  // Wait for Postgres to be ready (handles Railway startup ordering)
+  const MAX_ATTEMPTS = 10;
+  const RETRY_DELAY_MS = 3000;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const client = await pool.connect();
+      client.release();
+      break;
+    } catch (err) {
+      if (attempt === MAX_ATTEMPTS) throw err;
+      console.log(`[db] Waiting for PostgreSQL... (attempt ${attempt}/${MAX_ATTEMPTS})`);
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+    }
+  }
+
   for (const stmt of ddl) {
     await pool.query(stmt);
   }
