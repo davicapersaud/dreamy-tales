@@ -11,6 +11,7 @@ router.use(requireAuth);
 
 const FREE_DAILY_LIMIT = parseInt(process.env.FREE_DAILY_STORY_LIMIT || '3');
 const FREE_MAX_SAVED = parseInt(process.env.FREE_MAX_SAVED_STORIES || '10');
+const GLOBAL_DAILY_LIMIT = parseInt(process.env.GLOBAL_DAILY_STORY_LIMIT || '50');
 
 // In-memory SSE clients: storyId → Set of res objects
 const sseClients: Map<string, Set<Response>> = new Map();
@@ -33,6 +34,13 @@ function getQuotaUsed(parentId: string): number {
     'SELECT stories_generated FROM daily_quotas WHERE parent_id = ? AND date = ?'
   ).get(parentId, getTodayDate()) as { stories_generated: number } | undefined;
   return row?.stories_generated ?? 0;
+}
+
+function getGlobalQuotaUsed(): number {
+  const row = db.prepare(
+    'SELECT COALESCE(SUM(stories_generated), 0) as total FROM daily_quotas WHERE date = ?'
+  ).get(getTodayDate()) as { total: number };
+  return row.total;
 }
 
 function incrementQuota(parentId: string): void {
@@ -76,7 +84,12 @@ router.post('/generate', async (req: AuthRequest, res: Response): Promise<void> 
   const quotaUsed = getQuotaUsed(req.parentId!);
   const quotaRemaining = isPremium ? 999 : Math.max(0, FREE_DAILY_LIMIT - quotaUsed);
 
-  // Daily limit check disabled for testing
+  // Global daily cap (across all users)
+  const globalUsed = getGlobalQuotaUsed();
+  if (globalUsed >= GLOBAL_DAILY_LIMIT) {
+    res.status(429).json({ error: 'GLOBAL_LIMIT_REACHED', message: 'Daily story limit reached. Please come back tomorrow!' });
+    return;
+  }
 
   // Free tier: prune oldest non-favorite story if at limit
   if (!isPremium) {
@@ -128,7 +141,7 @@ router.post('/generate', async (req: AuthRequest, res: Response): Promise<void> 
       db.prepare(`
         UPDATE stories SET
           title = ?, status = 'ready', word_count = ?, page_count = ?,
-          llm_model = 'claude-sonnet-4-5', llm_prompt_tokens = ?, llm_completion_tokens = ?,
+          llm_model = 'gemini-2.5-flash-lite', llm_prompt_tokens = ?, llm_completion_tokens = ?,
           llm_latency_ms = ?, prompt_moderation_passed = ?, output_moderation_passed = ?,
           estimated_cost_usd = ?, updated_at = ?
         WHERE id = ?
