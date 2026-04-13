@@ -386,7 +386,7 @@ p  { font-size: 14px; color: var(--muted); line-height: 1.65; }
   <div class="badges">
     <span class="badge badge-teal">React + Vite SPA</span>
     <span class="badge badge-purple">Express API</span>
-    <span class="badge badge-orange">SQLite (WAL)</span>
+    <span class="badge badge-blue">PostgreSQL (Railway)</span>
     <span class="badge badge-blue">Gemini 2.5 Flash Lite</span>
     <span class="badge badge-pink">SSE Streaming</span>
     <span class="badge badge-green">JWT + Argon2id</span>
@@ -451,11 +451,11 @@ p  { font-size: 14px; color: var(--muted); line-height: 1.65; }
       </div>
 
       <!-- DATABASE -->
-      <div class="layer" style="border-top:3px solid var(--orange)">
-        <span class="layer-label" style="color:var(--orange)">Persistence</span>
+      <div class="layer" style="border-top:3px solid var(--blue)">
+        <span class="layer-label" style="color:var(--blue)">Persistence</span>
         <span class="layer-icon">🗄️</span>
-        <div class="layer-name">SQLite</div>
-        <div class="layer-tech">better-sqlite3 · WAL</div>
+        <div class="layer-name">PostgreSQL</div>
+        <div class="layer-tech">pg · Railway managed · connection pool</div>
         <div class="layer-items">
           <div class="layer-item"><span class="layer-item-dot" style="background:var(--orange)"></span>parents</div>
           <div class="layer-item"><span class="layer-item-dot" style="background:var(--orange)"></span>children</div>
@@ -782,7 +782,7 @@ p  { font-size: 14px; color: var(--muted); line-height: 1.65; }
 ════════════════════════════════════════════════════ -->
 <section class="section">
   <h2>④ Database Schema</h2>
-  <p style="margin-bottom:20px">Single SQLite file (WAL mode, NORMAL sync, 32 MB cache, FK enforced). All IDs are ULIDs except story_themes and events (INTEGER AUTOINCREMENT).</p>
+  <p style="margin-bottom:20px">Railway-managed PostgreSQL. Connection pool (max 10) via node-postgres. All IDs are ULIDs except story_themes and events (BIGSERIAL). Timestamps stored as BIGINT (ms epoch). Boolean flags use SMALLINT for compatibility.</p>
   <div class="schema-grid">
 
     <!-- parents -->
@@ -955,8 +955,8 @@ p  { font-size: 14px; color: var(--muted); line-height: 1.65; }
 
     <div style="display:flex;flex-direction:column;gap:12px">
       <div class="insight insight-good">
-        <div class="insight-title" style="color:var(--green)">SQLite WAL is the right call at this scale</div>
-        <p>WAL mode enables concurrent reads during writes, 32 MB page cache reduces I/O, and better-sqlite3 uses blocking synchronous calls — zero callback hell, ideal for a single-process Node server. Scales comfortably to ~10 k DAU before needing PostgreSQL.</p>
+        <div class="insight-title" style="color:var(--green)">PostgreSQL on Railway survives redeployments</div>
+        <p>Migrated from SQLite to Railway-managed PostgreSQL so data persists across every redeploy. node-postgres pool (max 10 connections) with async/await throughout. BIGINT timestamps avoid 32-bit overflow. Startup retry loop handles service ordering races.</p>
       </div>
 
       <div class="insight insight-good">
@@ -987,13 +987,13 @@ p  { font-size: 14px; color: var(--muted); line-height: 1.65; }
       </div>
 
       <div class="insight insight-warn">
-        <div class="insight-title" style="color:var(--orange)">Telemetry is fully in-band (SQLite)</div>
-        <p>All event tracking writes to the same SQLite file as the product data. Simple and dependency-free, but telemetry queries compete with product queries under load. At scale, events should be flushed asynchronously to a separate store or analytics pipeline.</p>
+        <div class="insight-title" style="color:var(--orange)">Telemetry is fully in-band (PostgreSQL)</div>
+        <p>All event tracking writes to the same PostgreSQL database as the product data. Fire-and-forget pattern (floating promises with .catch) ensures telemetry failures never crash the app. At scale, events should be flushed asynchronously to a separate analytics pipeline.</p>
       </div>
 
       <div class="insight insight-warn">
         <div class="insight-title" style="color:var(--orange)">Global daily cap is a blunt instrument</div>
-        <p>The 50-story/day global cap protects API cost but creates a poor UX for legitimate premium users if hit. No burst reservation for premium accounts exists yet. Consider separate premium and free-tier pools.</p>
+        <p>The 500-story/day global cap protects API cost but creates a poor UX for legitimate premium users if hit. No burst reservation for premium accounts exists yet. Consider separate premium and free-tier pools.</p>
       </div>
 
       <div class="insight insight-info">
@@ -1027,8 +1027,8 @@ p  { font-size: 14px; color: var(--muted); line-height: 1.65; }
         <div>
           <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">SQLite vs PostgreSQL</div>
           <div style="font-size:12px;color:var(--muted)">
-            <span style="color:var(--green);font-weight:700">Chose:</span> SQLite &nbsp;
-            <span style="color:var(--orange);font-weight:700">Trade:</span> No horizontal scaling, file-level backup complexity, no native connection pooling. Gains: zero infra cost, zero config, instant local dev, performant up to thousands of concurrent readers (WAL).
+            <span style="color:var(--green);font-weight:700">Chose:</span> PostgreSQL (Railway managed) &nbsp;
+            <span style="color:var(--orange);font-weight:700">Trade:</span> Requires network connection, slightly more complex local dev setup. Gains: persistent data across redeployments, proper connection pooling, standard SQL types (BIGINT, DOUBLE PRECISION), scales horizontally.
           </div>
         </div>
 
@@ -1085,8 +1085,8 @@ p  { font-size: 14px; color: var(--muted); line-height: 1.65; }
       </div>
       <div class="cost-row">
         <div>
-          <div class="cost-label">SQLite storage</div>
-          <div class="cost-note">Story text + prompts; no images stored</div>
+          <div class="cost-label">PostgreSQL (Railway)</div>
+          <div class="cost-note">Managed DB · story text + prompts; no images stored</div>
         </div>
         <div class="cost-value">~1–5 MB/1000 stories</div>
       </div>
@@ -1134,10 +1134,10 @@ p  { font-size: 14px; color: var(--muted); line-height: 1.65; }
     </div>
 
     <div class="risk-row">
-      <div class="risk-name">SQLite file corruption / data loss</div>
+      <div class="risk-name">PostgreSQL data loss / service outage</div>
       <span class="risk-pill risk-low">Low</span>
-      <span class="risk-pill risk-high">High</span>
-      <div class="risk-mitigation">WAL mode reduces corruption window. NORMAL sync is a trade (vs FULL). No automated backup configured — needs daily file copy to object storage (e.g. S3/R2).</div>
+      <span class="risk-pill risk-medium">Medium</span>
+      <div class="risk-mitigation">Railway manages backups and HA for the Hobby plan. API retries connection on startup (10 × 3 s). Consider enabling Railway's point-in-time recovery for production.</div>
     </div>
 
     <div class="risk-row">
@@ -1199,11 +1199,11 @@ p  { font-size: 14px; color: var(--muted); line-height: 1.65; }
     </div>
     <div class="insight insight-warn">
       <div class="insight-title" style="color:var(--orange)">Needs attention before launch</div>
-      <p>Add Secure flag to cookie in production · Configure HSTS · Implement COPPA/GDPR consent flow · Add nightly session cleanup job · Automate SQLite backups · Set up cost alert on /metrics</p>
+      <p>Add Secure flag to cookie in production · Configure HSTS · Implement COPPA/GDPR consent flow · Add nightly session cleanup job · Enable Railway point-in-time recovery · Set up cost alert on /metrics</p>
     </div>
     <div class="insight insight-risk">
       <div class="insight-title" style="color:var(--red)">Scale-limiting factors</div>
-      <p>SQLite write serialization at &gt;1000 concurrent writers · Single-process story generation queue · In-band telemetry competes with product queries · No image CDN (illustrations are text-only today)</p>
+      <p>PostgreSQL connection pool capped at 10 (Railway Hobby plan limit) · Single-process story generation queue · In-band telemetry competes with product queries · No image CDN (illustrations are text-only today)</p>
     </div>
   </div>
 </section>
