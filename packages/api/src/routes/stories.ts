@@ -9,9 +9,9 @@ import { trackEvent, incrementSessionStories, incrementSessionPages } from '../s
 const router = Router();
 router.use(requireAuth);
 
-const FREE_DAILY_LIMIT = parseInt(process.env.FREE_DAILY_STORY_LIMIT || '3');
-const FREE_MAX_SAVED = parseInt(process.env.FREE_MAX_SAVED_STORIES || '10');
-const GLOBAL_DAILY_LIMIT = parseInt(process.env.GLOBAL_DAILY_STORY_LIMIT || '50');
+const FREE_DAILY_LIMIT = parseInt(process.env.FREE_DAILY_STORY_LIMIT || '20');
+const FREE_MAX_SAVED = parseInt(process.env.FREE_MAX_SAVED_STORIES || '30');
+const GLOBAL_DAILY_LIMIT = parseInt(process.env.GLOBAL_DAILY_STORY_LIMIT || '500');
 
 // In-memory SSE clients: storyId → Set of res objects
 const sseClients: Map<string, Set<Response>> = new Map();
