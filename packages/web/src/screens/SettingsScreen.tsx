@@ -87,13 +87,12 @@ export default function SettingsScreen() {
         {/* Links */}
         <div style={{ background: 'var(--navy-light)', border: '2px solid rgba(255,255,255,0.05)', borderRadius: 20, overflow: 'hidden', marginBottom: 24 }}>
           {[
-            { label: '📊 View Metrics Dashboard', action: () => window.open('http://localhost:3001/dashboard', '_blank') },
             { label: '📚 Story Library', action: () => navigate('/library') },
-          ].map((item, i) => (
+          ].map((item, i, arr) => (
             <button
               key={i}
               onClick={item.action}
-              style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: i < 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', padding: '16px', textAlign: 'left', color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', padding: '16px', textAlign: 'left', color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
             >
               <span>{item.label}</span>
               <span style={{ opacity: 0.4 }}>›</span>

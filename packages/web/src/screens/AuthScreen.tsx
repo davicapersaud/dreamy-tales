@@ -4,8 +4,8 @@ import { useAuth } from '../hooks/useAuth';
 export default function AuthScreen() {
   const { login, register } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('test@gamil.com');
+  const [password, setPassword] = useState('testing123');
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
