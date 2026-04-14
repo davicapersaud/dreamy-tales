@@ -5,7 +5,7 @@ export default function AuthScreen() {
   const { login, register } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('test@gmail.com');
-  const [password, setPassword] = useState('testing123');
+  const [password, setPassword] = useState('testing323!');
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
